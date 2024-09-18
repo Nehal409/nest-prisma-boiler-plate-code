@@ -12,7 +12,7 @@ export class UsersRepository {
     });
   }
 
-  async findOneByEmail(email: string) {
+  async findByEmail(email: string) {
     return this.prisma.user.findFirst({
       where: { email },
     });

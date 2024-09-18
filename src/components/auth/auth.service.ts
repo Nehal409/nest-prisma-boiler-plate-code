@@ -18,7 +18,7 @@ export class AuthService {
 
   async register(registerRequest: RegisterRequestDto): Promise<AccessToken> {
     const { email, password } = registerRequest;
-    const existingUser = await this.usersRepository.findOneByEmail(email);
+    const existingUser = await this.usersRepository.findByEmail(email);
     if (existingUser) {
       throw badRequest(messages.USER.EMAIL_ALREADY_EXISTS);
     }
@@ -35,7 +35,7 @@ export class AuthService {
   }
 
   async validateUser(email: string, password: string): Promise<User> {
-    const user = await this.usersRepository.findOneByEmail(email);
+    const user = await this.usersRepository.findByEmail(email);
     if (!user) {
       throw badRequest(messages.USER.NOT_FOUND);
     }
