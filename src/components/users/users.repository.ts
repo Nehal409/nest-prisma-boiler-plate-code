@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { RegisterRequestDto } from '../auth/dto/register-request.dto';
 
@@ -18,14 +19,35 @@ export class UsersRepository {
     });
   }
 
-  async create(payload: RegisterRequestDto) {
-    return this.prisma.user.create({
+  async create(prismaClient: PrismaClient, payload: RegisterRequestDto) {
+    return prismaClient.user.create({
       data: {
         phone: payload.phone,
         password: payload.password,
         email: payload.email,
         firstName: payload.firstName,
         lastName: payload.lastName,
+      },
+    });
+  }
+
+  async insertUserRole(
+    prismaClient: PrismaClient,
+    userId: number,
+    roleId: number,
+  ) {
+    return prismaClient.userRole.create({
+      data: {
+        userId,
+        roleId,
+      },
+    });
+  }
+
+  async findRoleByName(role: string) {
+    return this.prisma.role.findFirst({
+      where: {
+        name: role,
       },
     });
   }

@@ -1,9 +1,11 @@
 import { badRequest } from '@hapi/boom';
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { User } from '@prisma/client';
+import { PrismaClient, User, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { messages } from 'src/constants/messages';
+import { Role } from 'src/enums/roles';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { UsersRepository } from '../users/users.repository';
 import { LoginRequestDto } from './dto/login-request.dto';
 import { RegisterRequestDto } from './dto/register-request.dto';
@@ -14,18 +16,38 @@ export class AuthService {
   constructor(
     private usersRepository: UsersRepository,
     private jwtService: JwtService,
+    private prisma: PrismaService,
   ) {}
 
   async register(registerRequest: RegisterRequestDto): Promise<AccessToken> {
-    const { email, password } = registerRequest;
+    const { email, password, role } = registerRequest;
     const existingUser = await this.usersRepository.findByEmail(email);
     if (existingUser) {
       throw badRequest(messages.USER.EMAIL_ALREADY_EXISTS);
     }
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = { ...registerRequest, password: hashedPassword };
-    const user = await this.usersRepository.create(newUser);
-    return this.generateAccessToken(user);
+    return this.prisma.$transaction(async (prismaClient: PrismaClient) => {
+      const user = await this.usersRepository.create(prismaClient, newUser);
+      await this.saveUserRole(prismaClient, user.id, role);
+      return this.generateAccessToken(user);
+    });
+  }
+
+  async saveUserRole(
+    prismaClient: PrismaClient,
+    userId: number,
+    role: Role,
+  ): Promise<UserRole> {
+    const roleData = await this.usersRepository.findRoleByName(role);
+    if (!roleData) {
+      throw badRequest(messages.USER.INVALID_ROLE);
+    }
+    return this.usersRepository.insertUserRole(
+      prismaClient,
+      userId,
+      roleData.id,
+    );
   }
 
   async login(loginRequest: LoginRequestDto): Promise<AccessToken> {
