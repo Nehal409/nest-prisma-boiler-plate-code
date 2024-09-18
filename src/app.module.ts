@@ -6,7 +6,7 @@ import configuration from 'config/index';
 import { WinstonModule } from 'nest-winston';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { UsersModule } from './components/users/users.module';
-import { UserRepository } from './components/users/users.repository';
+import { UsersRepository } from './components/users/users.repository';
 import { CustomResponseMiddleware } from './middleware/response';
 import { PrismaModule } from './prisma/prisma.module';
 import { winstonLogger } from './utils/winston-logger';
@@ -17,7 +17,7 @@ import { winstonLogger } from './utils/winston-logger';
       provide: APP_PIPE,
       useClass: ZodValidationPipe,
     },
-    UserRepository,
+    UsersRepository,
   ],
   imports: [
     PrismaModule,
