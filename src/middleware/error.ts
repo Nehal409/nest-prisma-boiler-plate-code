@@ -1,13 +1,14 @@
+import * as boom from '@hapi/boom';
 import {
-  ExceptionFilter,
-  Catch,
   ArgumentsHost,
+  Catch,
+  ExceptionFilter,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
-import * as boom from '@hapi/boom';
 import { PrismaClientValidationError } from '@prisma/client/runtime/library';
+import { ZodValidationException } from 'nestjs-zod';
 
 interface ErrorResponse {
   data: any[];
@@ -28,7 +29,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
     console.error('Error:', { path: request.url, exception });
 
     if (exception instanceof HttpException) {
-      this.handleHttpException(exception, response);
+      // Handle ZodValidationException separately from HttpException
+      if (exception instanceof ZodValidationException) {
+        this.handleZodError(exception, response);
+      } else {
+        this.handleHttpException(exception, response);
+      }
     } else if (boom.isBoom(exception)) {
       this.handleBoomError(exception, response);
     } else if (exception instanceof PrismaClientValidationError) {
@@ -62,6 +68,34 @@ export class AllExceptionsFilter implements ExceptionFilter {
     } else {
       responseBody = this.createErrorResponse(exception.name);
     }
+    response.status(status).json(responseBody);
+  }
+
+  private handleZodError(
+    exception: ZodValidationException,
+    response: any,
+  ): void {
+    const status = HttpStatus.BAD_REQUEST;
+    const zodErrors = exception?.getZodError()?.formErrors?.fieldErrors;
+
+    // Check if zodErrors contains any valid error fields
+    if (Object.keys(zodErrors).length === 0) {
+      const responseBody = this.createErrorResponse('Invalid request data');
+      return response.status(status).json(responseBody);
+    }
+
+    // Convert the Zod error object into a more structured format
+    const errors = Object.keys(zodErrors).map((field) => ({
+      field,
+      messages: zodErrors[field],
+    }));
+
+    const errorKey = errors[0]?.field || 'unknown_field';
+    const errorMessage =
+      (errors[0]?.messages[0]).toLowerCase() || 'validation error';
+    const message = `${errorKey} ${errorMessage}`;
+
+    const responseBody = this.createErrorResponse(message);
     response.status(status).json(responseBody);
   }
 
