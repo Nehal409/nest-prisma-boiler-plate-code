@@ -1,0 +1,41 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ehsaan-be-api
+    env_file:
+      - .env
+    environment:
+      - PORT=3000
+    ports:
+      - '3000:3000'
+    depends_on:
+      - apiDB
+    volumes:
+      - ./config/:/app/config
+      - ./src:/app/src
+      - ./prisma:/app/prisma
+    networks:
+      - ehsaan-be
+
+  apiDB:
+    image: postgres:16.4-bookworm
+    restart: always
+    environment:
+      - POSTGRES_DB=${PG_DATABASE}
+      - POSTGRES_PASSWORD=${PG_PASSWORD}
+    container_name: ehsaan-be-db
+    volumes:
+      - ehsaan-be-data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    networks:
+      - ehsaan-be
+
+volumes:
+  ehsaan-be-data: ~
+
+networks:
+  ehsaan-be:
+    driver: bridge
