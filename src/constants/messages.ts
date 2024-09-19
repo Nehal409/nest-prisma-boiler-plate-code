@@ -10,6 +10,6 @@ export const messages = {
     INVALID_ROLE: 'Invalid role',
     REGISTERED_SUCCESSFULLY: 'User registered successfully',
     LOGGED_IN_SUCCESSFULLY: 'User logged in successfully',
-    INVALID_PASSWORD: 'Invalid credentials',
+    INVALID_CREDENTIALS: 'Invalid credentials',
   },
 };

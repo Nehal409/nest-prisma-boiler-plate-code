@@ -1,5 +1,6 @@
 import { badRequest } from '@hapi/boom';
 import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, User, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -11,7 +12,7 @@ import { Logger } from 'winston';
 import { UsersRepository } from '../users/users.repository';
 import { LoginRequestDto } from './dto/login-request.dto';
 import { RegisterRequestDto } from './dto/register-request.dto';
-import { AccessToken } from './types/AccessToken';
+import { AccessToken, AuthTokens, RefreshToken } from './types/auth-token';
 
 @Injectable()
 export class AuthService {
@@ -20,6 +21,7 @@ export class AuthService {
     private readonly usersRepository: UsersRepository,
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
   ) {}
 
   async register(registerRequest: RegisterRequestDto): Promise<void> {
@@ -54,37 +56,42 @@ export class AuthService {
     );
   }
 
-  async login(loginRequest: LoginRequestDto): Promise<AccessToken> {
+  async login(loginRequest: LoginRequestDto): Promise<AuthTokens> {
     const { email, password } = loginRequest;
     const user = await this.validateUser(email, password);
     const { id: userId } = user;
     const userRoleData = await this.usersRepository.getUserRole(userId);
     // Extract the role name (assuming a user can have multiple roles, we grab the first one)
+    // Fix this in the future
     const userRole =
       userRoleData.roles.length > 0 ? userRoleData.roles[0].role.name : null;
-    return this.generateAccessToken(userId, userRole);
+    const { access_token } = this.generateAccessToken(userId, userRole);
+    const { refresh_token } = this.generateRefreshToken(userId);
+    return { access_token, refresh_token };
   }
 
   private async validateUser(email: string, password: string): Promise<User> {
     const user = await this.usersRepository.findByEmail(email);
-    if (!user) {
-      throw badRequest(messages.USER.NOT_FOUND);
-    }
-    const isPasswordValid: boolean = bcrypt.compareSync(
-      password,
-      user.password,
-    );
-    if (!isPasswordValid) {
-      throw badRequest(messages.USER.INVALID_PASSWORD);
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      throw badRequest(messages.USER.INVALID_CREDENTIALS);
     }
     return user;
   }
 
-  private async generateAccessToken(
-    userId: number,
-    role: string,
-  ): Promise<AccessToken> {
+  private generateAccessToken(userId: number, role: string): AccessToken {
     const payload = { role, userId };
-    return { access_token: this.jwtService.sign(payload) };
+    return {
+      access_token: this.jwtService.sign(payload), // jwt secret and expiry for access token is passed in the auth.module.
+    };
+  }
+
+  private generateRefreshToken(userId: number): RefreshToken {
+    const payload = { userId };
+    return {
+      refresh_token: this.jwtService.sign(payload, {
+        secret: this.configService.get('jwt.refreshTokenSecret'),
+        expiresIn: this.configService.get('jwt.refreshTokenExpiry'),
+      }),
+    };
   }
 }
