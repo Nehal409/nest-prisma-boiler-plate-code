@@ -5,7 +5,7 @@ import { RegisterRequestDto } from '../auth/dto/register-request.dto';
 
 @Injectable()
 export class UsersRepository {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async getUserDetails(userId: number) {
     return this.prisma.user.findFirst({
@@ -48,6 +48,23 @@ export class UsersRepository {
     return this.prisma.role.findFirst({
       where: {
         name: role,
+      },
+    });
+  }
+
+  async getUserRole(userId: number) {
+    return this.prisma.user.findFirst({
+      where: { id: userId },
+      select: {
+        roles: {
+          select: {
+            role: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
   }

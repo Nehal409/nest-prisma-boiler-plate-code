@@ -8,8 +8,8 @@ export const messages = {
     DOES_NOT_EXISTS: 'User does not exists',
     NOT_FOUND: 'User not found',
     INVALID_ROLE: 'Invalid role',
-    CREATED_SUCCESSFULLY: 'User created successfully',
+    REGISTERED_SUCCESSFULLY: 'User registered successfully',
     LOGGED_IN_SUCCESSFULLY: 'User logged in successfully',
-    INVALID_PASSWORD: 'Invalid credentials'
+    INVALID_PASSWORD: 'Invalid credentials',
   },
 };

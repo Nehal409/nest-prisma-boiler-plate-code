@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import configuration from 'config/index';
 import { WinstonModule } from 'nest-winston';
 import { ZodValidationPipe } from 'nestjs-zod';
+import { AuthModule } from './components/auth/auth.module';
 import { UsersModule } from './components/users/users.module';
 import { UsersRepository } from './components/users/users.repository';
 import { CustomResponseMiddleware } from './middleware/response';
@@ -22,6 +23,7 @@ import { winstonLogger } from './utils/winston-logger';
   imports: [
     PrismaModule,
     UsersModule,
+    AuthModule,
     ConfigModule.forRoot({
       cache: true,
       isGlobal: true,

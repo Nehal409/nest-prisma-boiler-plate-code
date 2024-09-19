@@ -10,8 +10,12 @@ export const winstonLogger = winston.createLogger({
         winston.format.colorize(),
         winston.format.prettyPrint(),
         winston.format.errors({ stack: true }),
-        winston.format.printf(({ level, message, context, module }) => {
-          return `${new Date().toISOString()} [${context || 'App'}${module ? ` - ${module}` : ''}] ${level}: 🚀 ~ ${message}`;
+        winston.format.printf(({ level, message, context, module, data }) => {
+          let log = `${new Date().toISOString()} [${context || 'App'}${module ? ` - ${module}` : ''}] ${level}: 🚀 ~ ${message}`;
+          if (data) {
+            log += ` | Data: ${JSON.stringify(data, null, 2)}`;
+          }
+          return log;
         }),
       ),
     }),

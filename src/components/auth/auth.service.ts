@@ -1,11 +1,13 @@
 import { badRequest } from '@hapi/boom';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, User, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { messages } from 'src/constants/messages';
 import { Role } from 'src/enums/roles';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { Logger } from 'winston';
 import { UsersRepository } from '../users/users.repository';
 import { LoginRequestDto } from './dto/login-request.dto';
 import { RegisterRequestDto } from './dto/register-request.dto';
@@ -14,12 +16,13 @@ import { AccessToken } from './types/AccessToken';
 @Injectable()
 export class AuthService {
   constructor(
-    private usersRepository: UsersRepository,
-    private jwtService: JwtService,
-    private prisma: PrismaService,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
+    private readonly usersRepository: UsersRepository,
+    private readonly jwtService: JwtService,
+    private readonly prisma: PrismaService,
   ) {}
 
-  async register(registerRequest: RegisterRequestDto): Promise<AccessToken> {
+  async register(registerRequest: RegisterRequestDto): Promise<void> {
     const { email, password, role } = registerRequest;
     const existingUser = await this.usersRepository.findByEmail(email);
     if (existingUser) {
@@ -30,11 +33,12 @@ export class AuthService {
     return this.prisma.$transaction(async (prismaClient: PrismaClient) => {
       const user = await this.usersRepository.create(prismaClient, newUser);
       await this.saveUserRole(prismaClient, user.id, role);
-      return this.generateAccessToken(user);
+      this.logger.info(messages.USER.REGISTERED_SUCCESSFULLY);
+      return;
     });
   }
 
-  async saveUserRole(
+  private async saveUserRole(
     prismaClient: PrismaClient,
     userId: number,
     role: Role,
@@ -53,10 +57,15 @@ export class AuthService {
   async login(loginRequest: LoginRequestDto): Promise<AccessToken> {
     const { email, password } = loginRequest;
     const user = await this.validateUser(email, password);
-    return this.generateAccessToken(user);
+    const { id: userId } = user;
+    const userRoleData = await this.usersRepository.getUserRole(userId);
+    // Extract the role name (assuming a user can have multiple roles, we grab the first one)
+    const userRole =
+      userRoleData.roles.length > 0 ? userRoleData.roles[0].role.name : null;
+    return this.generateAccessToken(userId, userRole);
   }
 
-  async validateUser(email: string, password: string): Promise<User> {
+  private async validateUser(email: string, password: string): Promise<User> {
     const user = await this.usersRepository.findByEmail(email);
     if (!user) {
       throw badRequest(messages.USER.NOT_FOUND);
@@ -71,8 +80,11 @@ export class AuthService {
     return user;
   }
 
-  async generateAccessToken(user: User): Promise<AccessToken> {
-    const payload = { email: user.email, id: user.id };
+  private async generateAccessToken(
+    userId: number,
+    role: string,
+  ): Promise<AccessToken> {
+    const payload = { role, userId };
     return { access_token: this.jwtService.sign(payload) };
   }
 }
