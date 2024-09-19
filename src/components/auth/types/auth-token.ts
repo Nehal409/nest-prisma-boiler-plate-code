@@ -1,12 +1,12 @@
 export type AccessToken = {
-  access_token: string;
+  accessToken: string;
 };
 
 export type RefreshToken = {
-  refresh_token: string;
+  refreshToken: string;
 };
 
 export type AuthTokens = {
-  access_token: string;
-  refresh_token: string;
+  accessToken: string;
+  refreshToken: string;
 };

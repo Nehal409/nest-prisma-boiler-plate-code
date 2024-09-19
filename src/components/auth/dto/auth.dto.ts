@@ -16,4 +16,10 @@ const RegisterRequestSchema = z.object({
   role: userRole,
 });
 
+const LoginRequestSchema = z.object({
+  email: z.string().email({ message: 'invalid email address' }),
+  password: z.string().min(1, { message: 'field is required' }),
+});
+
 export class RegisterRequestDto extends createZodDto(RegisterRequestSchema) {}
+export class LoginRequestDto extends createZodDto(LoginRequestSchema) {}

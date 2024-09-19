@@ -10,8 +10,8 @@ import { Role } from 'src/enums/roles';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Logger } from 'winston';
 import { UsersRepository } from '../users/users.repository';
-import { LoginRequestDto } from './dto/login-request.dto';
-import { RegisterRequestDto } from './dto/register-request.dto';
+import { LoginRequestDto, RegisterRequestDto } from './dto/auth.dto';
+import { AccessTokenPayload } from './types/AccessTokenPayload';
 import { AccessToken, AuthTokens, RefreshToken } from './types/auth-token';
 
 @Injectable()
@@ -60,14 +60,10 @@ export class AuthService {
     const { email, password } = loginRequest;
     const user = await this.validateUser(email, password);
     const { id: userId } = user;
-    const userRoleData = await this.usersRepository.getUserRole(userId);
-    // Extract the role name (assuming a user can have multiple roles, we grab the first one)
-    // Fix this in the future
-    const userRole =
-      userRoleData.roles.length > 0 ? userRoleData.roles[0].role.name : null;
-    const { access_token } = this.generateAccessToken(userId, userRole);
-    const { refresh_token } = this.generateRefreshToken(userId);
-    return { access_token, refresh_token };
+    const userRole = await this.getUserRole(userId);
+    const { accessToken } = this.generateAccessToken(userId, userRole);
+    const { refreshToken } = this.generateRefreshToken(userId);
+    return { accessToken, refreshToken };
   }
 
   private async validateUser(email: string, password: string): Promise<User> {
@@ -78,20 +74,38 @@ export class AuthService {
     return user;
   }
 
+  private async getUserRole(userId: number): Promise<string | null> {
+    // Extract the role name (assuming a user can have multiple roles, we grab the first one)
+    // TODO: How to handle user's multiple roles.
+    const userRoleData = await this.usersRepository.getUserRole(userId);
+    return userRoleData.roles.length > 0
+      ? userRoleData.roles[0].role.name
+      : null;
+  }
+
   private generateAccessToken(userId: number, role: string): AccessToken {
     const payload = { role, userId };
     return {
-      access_token: this.jwtService.sign(payload), // jwt secret and expiry for access token is passed in the auth.module.
+      accessToken: this.jwtService.sign(payload), // jwt secret and expiry for access token is passed in the auth.module.
     };
   }
 
   private generateRefreshToken(userId: number): RefreshToken {
     const payload = { userId };
     return {
-      refresh_token: this.jwtService.sign(payload, {
+      refreshToken: this.jwtService.sign(payload, {
         secret: this.configService.get('jwt.refreshTokenSecret'),
         expiresIn: this.configService.get('jwt.refreshTokenExpiry'),
       }),
     };
+  }
+
+  async refreshAccessToken(refreshToken: string): Promise<AccessToken> {
+    const payload: AccessTokenPayload = this.jwtService.verify(refreshToken, {
+      secret: this.configService.get<string>('jwt.refreshTokenSecret'),
+    });
+    const { userId } = payload;
+    const userRole = await this.getUserRole(userId);
+    return this.generateAccessToken(userId, userRole);
   }
 }

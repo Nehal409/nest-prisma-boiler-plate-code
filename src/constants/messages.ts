@@ -12,4 +12,7 @@ export const messages = {
     LOGGED_IN_SUCCESSFULLY: 'User logged in successfully',
     INVALID_CREDENTIALS: 'Invalid credentials',
   },
+  AUTH: {
+    ACCESS_TOKEN_SUCCESS: 'Access token generated successfully',
+  },
 };
