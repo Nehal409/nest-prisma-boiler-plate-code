@@ -2,7 +2,11 @@ import { Body, Controller, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { messages } from 'src/constants/messages';
 import { AuthService } from './auth.service';
-import { LoginRequestDto, RegisterRequestDto } from './dto/auth.dto';
+import {
+  LoginRequestDto,
+  RefreshAccessTokenDto,
+  RegisterRequestDto,
+} from './dto/auth.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -28,8 +32,10 @@ export class AuthController {
   }
 
   @Post('refresh-token')
-  async refreshToken(@Body('refreshToken') refreshToken: string) {
-    const accessToken = await this.authService.refreshAccessToken(refreshToken);
+  async refreshToken(@Body() refreshAccessTokenDto: RefreshAccessTokenDto) {
+    const accessToken = await this.authService.refreshAccessToken(
+      refreshAccessTokenDto,
+    );
     return { data: accessToken, message: messages.AUTH.ACCESS_TOKEN_SUCCESS };
   }
 }

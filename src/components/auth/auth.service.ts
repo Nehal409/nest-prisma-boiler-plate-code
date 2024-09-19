@@ -10,7 +10,11 @@ import { Role } from 'src/enums/roles';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Logger } from 'winston';
 import { UsersRepository } from '../users/users.repository';
-import { LoginRequestDto, RegisterRequestDto } from './dto/auth.dto';
+import {
+  LoginRequestDto,
+  RefreshAccessTokenDto,
+  RegisterRequestDto,
+} from './dto/auth.dto';
 import { AccessTokenPayload } from './types/AccessTokenPayload';
 import { AccessToken, AuthTokens, RefreshToken } from './types/auth-token';
 
@@ -100,7 +104,10 @@ export class AuthService {
     };
   }
 
-  async refreshAccessToken(refreshToken: string): Promise<AccessToken> {
+  async refreshAccessToken(
+    refreshAccessTokenDto: RefreshAccessTokenDto,
+  ): Promise<AccessToken> {
+    const { refreshToken } = refreshAccessTokenDto;
     const payload: AccessTokenPayload = this.jwtService.verify(refreshToken, {
       secret: this.configService.get<string>('jwt.refreshTokenSecret'),
     });

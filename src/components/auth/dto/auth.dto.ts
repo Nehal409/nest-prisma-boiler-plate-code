@@ -21,5 +21,12 @@ const LoginRequestSchema = z.object({
   password: z.string().min(1, { message: 'field is required' }),
 });
 
+const RefreshAccessTokenSchema = z.object({
+  refreshToken: z.string().min(1, { message: 'field is required' }),
+});
+
 export class RegisterRequestDto extends createZodDto(RegisterRequestSchema) {}
 export class LoginRequestDto extends createZodDto(LoginRequestSchema) {}
+export class RefreshAccessTokenDto extends createZodDto(
+  RefreshAccessTokenSchema,
+) {}
